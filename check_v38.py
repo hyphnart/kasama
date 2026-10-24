@@ -1,4 +1,7 @@
 from pathlib import Path
+import re
+_version=re.search(r'project\(KasaPro VERSION (\d+)\.(\d+)',(Path(__file__).parent/'CMakeLists.txt').read_text())
+assert _version and (int(_version.group(1)),int(_version.group(2))) >= (4,1)
 p=Path(__file__).parent
 h=(p/'FractionalUnits.h').read_text(encoding='utf-8');f=(p/'FractionalTradeDialog.h').read_text(encoding='utf-8')
 assert 'selectedMilli%denominator!=0' in h
@@ -7,7 +10,6 @@ assert 'canonical=="m²"&&selected=="cm²"' in h
 assert 'FractionalUnits::convert' in f
 assert 'updateUnits()' in f
 assert 'Birim fiyatı ANA STOK BİRİMİ' in f
-assert any('VERSION '+v in (p/'CMakeLists.txt').read_text() for v in ('3.8','3.9','4.0','4.1'))
 def conv(amt,den):
  if amt<=0 or amt%den:raise ValueError
  return amt//den

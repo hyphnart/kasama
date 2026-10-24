@@ -1,3 +1,4 @@
+#include "CartonSaleEngine.h"
 #include "CartonOpeningCenter.h"
 #include "PackagingCenter.h"
 #include "FractionalReconciliationDialog.h"
@@ -105,6 +106,7 @@ static bool initDb(){
  if(!run("CREATE INDEX IF NOT EXISTS ix_variant_parent ON product_variants(parent_product_id)"))return false;
  QString packagingError;if(!PackagingCenter::install(db,&packagingError)){qWarning()<<packagingError;return false;}
  QString cartonError;if(!CartonOpeningCenter::install(db,&cartonError)){qWarning()<<cartonError;return false;}
+ QString cartonSaleError;if(!CartonSaleEngine::install(db,&cartonSaleError)){qWarning()<<cartonSaleError;return false;}
  QString fractionalError;if(!FractionalStock::install(db,&fractionalError)){qWarning()<<fractionalError;return false;}
  if(!FractionalTrade::install(db,&fractionalError)){qWarning()<<fractionalError;return false;}
  return true;
@@ -307,7 +309,7 @@ class BackofficeWindow:public QMainWindow{
  void openHeld(){QDialog d(this);auto *v=new QVBoxLayout(&d);auto *list=new QListWidget;auto q=query("SELECT id,label,created_at FROM held_carts ORDER BY id DESC");while(q.next()){auto *item=new QListWidgetItem(QString("#%1 %2 (%3)").arg(q.value(0).toString(),q.value(1).toString(),q.value(2).toString()));item->setData(Qt::UserRole,q.value(0));list->addItem(item);}v->addWidget(list);auto *b=new QPushButton("Secileni sepete getir");v->addWidget(b);connect(b,&QPushButton::clicked,&d,&QDialog::accept);if(d.exec()!=QDialog::Accepted || !list->currentItem())return;if(!cart.isEmpty())return failure("Mevcut sepeti once tamamlayin veya bekletin.");int id=list->currentItem()->data(Qt::UserRole).toInt();auto qq=query("SELECT cart_json FROM held_carts WHERE id=?",{id});if(!qq.next())return;auto a=QJsonDocument::fromJson(qq.value(0).toByteArray()).array();for(auto v:a){auto l=v.toArray();if(l.size()==2)cart.append({l[0].toInt(),l[1].toInt()});}run("DELETE FROM held_carts WHERE id=?",{id});refreshCart();}
  void checkout(const QString &type){if(cart.isEmpty())return failure("Sepet bos.");int wid=warehouse->currentData().toInt();if(!wid)return failure("Depo secin.");if(!db.transaction())return failure(err());bool ok=true;QVector<QPair<int,qint64>> prices; qint64 total=0;
  for(auto x:cart){auto q=query("SELECT price_cents,cost_cents FROM products WHERE id=?",{x.first});if(!q.next()){ok=false;break;}qint64 unit=(type=="Satin Alma")?q.value(1).toLongLong():q.value(0).toLongLong();prices.append({x.first,unit});total+=unit*x.second;
- if(type=="Satis"){ok=run("UPDATE stock SET qty=qty-? WHERE product_id=? AND warehouse_id=? AND qty-reserved>=?",{x.second,x.first,wid,x.second});auto c=query("SELECT changes()");c.next();ok=ok&&c.value(0).toInt()==1;if(!ok)break;}
+ if(type=="Satis"){auto physical=query("SELECT COUNT(*) FROM carton_stock c JOIN product_packs p ON p.id=c.pack_id WHERE p.product_id=? AND c.warehouse_id=? AND (c.sealed_qty>0 OR c.loose_units>0)",{x.first,wid});if(!physical.next()||physical.value(0).toInt()>0){ok=false;break;}ok=run("UPDATE stock SET qty=qty-? WHERE product_id=? AND warehouse_id=? AND qty-reserved>=?",{x.second,x.first,wid,x.second});auto c=query("SELECT changes()");c.next();ok=ok&&c.value(0).toInt()==1;if(!ok)break;}
  if(type=="Satin Alma"){ok=run("INSERT OR IGNORE INTO stock(product_id,warehouse_id,qty,reserved) VALUES(?,?,0,0)",{x.first,wid}) && run("UPDATE stock SET qty=qty+? WHERE product_id=? AND warehouse_id=?",{x.second,x.first,wid});if(!ok)break;}
  }
  bool instant=type=="Satis"||type=="Satin Alma";int party=customer->currentData().toInt();QVariant partyArg=party>0?QVariant(party):QVariant();
@@ -318,7 +320,7 @@ class BackofficeWindow:public QMainWindow{
  if(payment->currentText()=="Veresiye" && party>0)ok=run("UPDATE parties SET balance_cents=balance_cents+? WHERE id=?",{type=="Satis"?total:-total,party});
  if(payment->currentText()=="Veresiye" && party<=0)ok=false;
  }
- if(ok&&db.commit()){cart.clear();refresh();message(type+" belgesi #"+QString::number(doc)+" kaydedildi.");}else{db.rollback();failure("Islem geri alindi. Stok yetersiz veya cari secimi eksik olabilir.");}
+ if(ok&&db.commit()){cart.clear();refresh();message(type+" belgesi #"+QString::number(doc)+" kaydedildi.");}else{db.rollback();failure("Islem geri alindi. Stok, cari veya kapali koli takibi kontrol edilmeli. Fiziksel ambalajli urunleri ana POS ekranindan satin.");}
  }
  void exportCsv(){QString file=QFileDialog::getSaveFileName(this,"CSV aktar","kasapro_rapor.csv","CSV (*.csv)");if(file.isEmpty())return;QFile f(file);if(!f.open(QIODevice::WriteOnly|QIODevice::Text))return failure("Dosya yazilamadi.");QTextStream out(&f);out.setEncoding(QStringConverter::Utf8);out<<QChar(0xFEFF);QStringList hs;for(int c=0;c<table->columnCount();c++)hs<<'"'+table->horizontalHeaderItem(c)->text().replace('"',"\"\"")+'"';out<<hs.join(';')<<'\n';for(int r=0;r<table->rowCount();r++){QStringList vals;for(int c=0;c<table->columnCount();c++){QString s=table->item(r,c)?table->item(r,c)->text():"";s.replace('"',"\"\"");vals<<'"'+s+'"';}out<<vals.join(';')<<'\n';}message("CSV kaydedildi.");}
 public:
@@ -1447,6 +1449,8 @@ class PosWindow final:public QMainWindow {
       if(ok){auto q=query("SELECT last_insert_rowid()");if(q.next())docId=q.value(0).toInt();else ok=false;}
       for(const BasketLine &line:basket){
         if(!ok)break;
+        QString physicalError;ok=CartonSaleEngine::consume(db,line.id,depotId,line.qty,docId,&physicalError);
+        if(!ok){qWarning()<<"Koli satış kontrolü:"<<physicalError;break;}
         ok=run("UPDATE stock SET qty=qty-? WHERE product_id=? AND warehouse_id=? AND qty-reserved>=?",{line.qty,line.id,depotId,line.qty});
         auto changes=query("SELECT changes()");ok=ok&&changes.next()&&changes.value(0).toInt()==1;
         if(ok)ok=run("INSERT INTO doc_lines(doc_id,product_id,warehouse_id,qty,unit_cents) VALUES(?,?,?,?,?)",{docId,line.id,depotId,line.qty,line.price});

@@ -1,4 +1,7 @@
 from pathlib import Path
+import re
+_version=re.search(r'project\(KasaPro VERSION (\d+)\.(\d+)',(Path(__file__).parent/'CMakeLists.txt').read_text())
+assert _version and (int(_version.group(1)),int(_version.group(2))) >= (4,1)
 import sqlite3
 p=Path(__file__).parent
 h=(p/'FractionalReconciliationDialog.h').read_text()
@@ -12,7 +15,6 @@ assert 'LEFT JOIN stock s' in h
 assert 'balance!=movements' in h
 assert 'Salt okunur' in h
 assert 'INSERT INTO' not in h and 'UPDATE ' not in h and 'DELETE FROM' not in h
-assert 'VERSION 4.1' in (p/'CMakeLists.txt').read_text()
 # Independently execute report SQL against a representative SQLite schema
 sql=h.split('R"SQL(',1)[1].split(')SQL"',1)[0]
 con=sqlite3.connect(':memory:')
