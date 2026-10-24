@@ -1,0 +1,35 @@
+name: KasaPro Windows EXE
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+jobs:
+  windows-build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.3'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+          cache: true
+      - name: Configure (MSVC 2022)
+        shell: pwsh
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="$env:Qt6_DIR"
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release --parallel
+      - name: Deploy Qt dependencies
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item build/Release/KasaPro.exe dist/
+          windeployqt --release --no-translations dist/KasaPro.exe
+          if (-not (Test-Path dist/KasaPro.exe)) { throw 'KasaPro.exe bulunamadı' }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KasaPro-Windows-EXE
+          path: dist/
+          if-no-files-found: error
