@@ -60,9 +60,13 @@ inline bool authorize(QWidget *parent,QSqlDatabase &database,const QString &acti
         if(!q.exec()||!q.next())return false;
         const QByteArray candidate=derive(pin,q.value(0).toByteArray());
         const QByteArray stored=q.value(1).toByteArray();
+        // QByteArray has no value(index) member in Qt 6.8; validate lengths
+        // before accessing bytes so corrupted stored hashes fail closed.
+        if(candidate.size()!=32 || stored.size()!=32)return false;
         unsigned char diff=0;
-        for(int i=0;i<32;++i) diff|=static_cast<unsigned char>(candidate.at(i)^stored.value(i));
-        if(candidate.size()==stored.size()&&diff==0){
+        for(int i=0;i<32;++i)
+            diff|=static_cast<unsigned char>(candidate.at(i)^stored.at(i));
+        if(diff==0){
             QSqlQuery audit(database);audit.prepare("INSERT INTO approval_audit(action,reference_id,result) VALUES(?,?,'Onaylandi')");
             audit.addBindValue(action);audit.addBindValue(refId);audit.exec();
             return true;

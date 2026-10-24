@@ -13,7 +13,7 @@ class CartonOpeningCenter final : public QDialog {
     QSpinBox *count=nullptr,*neededUnits=nullptr;
     QLabel *overview=nullptr;
     QTableWidget *history=nullptr;
-    static bool exec(QSqlDatabase &db,const QString &sql,const QVariantList &params={},QString *err=nullptr){
+    static bool executeSql(QSqlDatabase &db,const QString &sql,const QVariantList &params={},QString *err=nullptr){
         QSqlQuery q(db);if(!q.prepare(sql)){if(err)*err=q.lastError().text();return false;}
         for(const auto &p:params)q.addBindValue(p);
         if(!q.exec()){if(err)*err=q.lastError().text();return false;}return true;
@@ -53,9 +53,9 @@ class CartonOpeningCenter final : public QDialog {
         const qint64 sealed=c.value(0).toLongLong(),loose=c.value(1).toLongLong();
         // Existing POS does not consume tracked loose units yet. Fail closed on mismatch.
         if(sealed*per+loose>total||total<reserved){db.rollback();QMessageBox::warning(this,"Mutabakat","Kapalı/açık kayıtları toplam stokla uyuşmuyor.");return;}
-        bool ok=exec(db,"UPDATE carton_stock SET sealed_qty=sealed_qty-?,loose_units=loose_units+?,updated_at=CURRENT_TIMESTAMP WHERE warehouse_id=? AND pack_id=? AND sealed_qty>=?",{n,n*per,wid,packId,n},&error);
+        bool ok=executeSql(db,"UPDATE carton_stock SET sealed_qty=sealed_qty-?,loose_units=loose_units+?,updated_at=CURRENT_TIMESTAMP WHERE warehouse_id=? AND pack_id=? AND sealed_qty>=?",{n,n*per,wid,packId,n},&error);
         QSqlQuery changes(db);ok=ok&&changes.exec("SELECT changes()")&&changes.next()&&changes.value(0).toInt()==1;
-        ok=ok&&exec(db,"INSERT INTO carton_events(product_id,warehouse_id,pack_id,action,case_qty,units_snapshot,loose_delta,note) VALUES(?,?,?,'OPEN',?,?,?,?)",{pid,wid,packId,n,per,n*per,QStringLiteral("Manuel koli açma")},&error);
+        ok=ok&&executeSql(db,"INSERT INTO carton_events(product_id,warehouse_id,pack_id,action,case_qty,units_snapshot,loose_delta,note) VALUES(?,?,?,'OPEN',?,?,?,?)",{pid,wid,packId,n,per,n*per,QStringLiteral("Manuel koli açma")},&error);
         if(!ok||!db.commit()){db.rollback();QMessageBox::warning(this,"İşlem",error.isEmpty()?"Koli açılamadı.":error);return;}
         refresh();QMessageBox::information(this,"Koli açıldı",QString("%1 koli açıldı; toplam ürün adedi değişmedi.").arg(n));
     }
@@ -65,7 +65,7 @@ public:
           "CREATE TABLE IF NOT EXISTS carton_stock(warehouse_id INTEGER NOT NULL REFERENCES warehouses(id),pack_id INTEGER NOT NULL REFERENCES product_packs(id),sealed_qty INTEGER NOT NULL DEFAULT 0 CHECK(sealed_qty>=0),loose_units INTEGER NOT NULL DEFAULT 0 CHECK(loose_units>=0),updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(warehouse_id,pack_id))",
           "CREATE TABLE IF NOT EXISTS carton_events(id INTEGER PRIMARY KEY,product_id INTEGER NOT NULL REFERENCES products(id),warehouse_id INTEGER NOT NULL REFERENCES warehouses(id),pack_id INTEGER NOT NULL REFERENCES product_packs(id),action TEXT NOT NULL CHECK(action IN ('RECEIVE','OPEN')),case_qty INTEGER NOT NULL CHECK(case_qty>0),units_snapshot INTEGER NOT NULL CHECK(units_snapshot>0),loose_delta INTEGER NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,note TEXT NOT NULL DEFAULT '')",
           "CREATE TABLE IF NOT EXISTS carton_policies(pack_id INTEGER PRIMARY KEY REFERENCES product_packs(id),opening_policy TEXT NOT NULL DEFAULT 'manual' CHECK(opening_policy IN ('manual','approval','forbid')))"};
-        for(const auto &s:sql)if(!exec(db,s,{},err))return false;return true;
+        for(const auto &s:sql)if(!executeSql(db,s,{},err))return false;return true;
     }
     // One-action helper: calculates the smallest required number of sealed cases,
     // but deliberately does not charge, sell, or modify base-unit inventory.
@@ -108,7 +108,7 @@ public:
             const QString val=q.exec()&&q.next()?q.value(0).toString():"manual";const int i=policy->findData(val);policy->setCurrentIndex(i<0?0:i);refresh();});
         connect(savePolicy,&QPushButton::clicked,this,[this]{
             if(pack->currentData().toInt()<=0)return;
-            QString err;if(!exec(db,"INSERT INTO carton_policies(pack_id,opening_policy) VALUES(?,?) ON CONFLICT(pack_id) DO UPDATE SET opening_policy=excluded.opening_policy",{pack->currentData(),policy->currentData()},&err))QMessageBox::warning(this,"Kural",err);
+            QString err;if(!executeSql(db,"INSERT INTO carton_policies(pack_id,opening_policy) VALUES(?,?) ON CONFLICT(pack_id) DO UPDATE SET opening_policy=excluded.opening_policy",{pack->currentData(),policy->currentData()},&err))QMessageBox::warning(this,"Kural",err);
             else QMessageBox::information(this,"Kural","Ambalaj açma kuralı kaydedildi. 'Yönetici onaylı' kuralının güvenli kimlik doğrulaması henüz POS'a bağlı değil.");
         });
         connect(quickOpen,&QPushButton::clicked,this,[this]{count->setValue(1);if(policy->currentData().toString()=="approval"){QMessageBox::warning(this,"Yönetici onayı","Yetki entegrasyonu tamamlanana kadar koli açılamaz.");return;}openCases();});
