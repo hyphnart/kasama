@@ -7,6 +7,7 @@
 #include "SectorCatalogDialog.h"
 #include "VariantManagerDialog.h"
 #include "UiDesign.h"
+#include "FluentDesign.h"
 #include "BarcodeLabelPrinter.h"
 #include <QtWidgets>
 #include <QtSql>
@@ -284,7 +285,7 @@ class BackofficeWindow:public QMainWindow{
   int count=0,physical=0,reserved=0,available=0;
   while(q.next()){int r=warehouseTable->rowCount();warehouseTable->insertRow(r);auto *photo=new QLabel;photo->setAlignment(Qt::AlignCenter);QPixmap pm(q.value(7).toString());if(!pm.isNull())photo->setPixmap(pm.scaled(54,54,Qt::KeepAspectRatio,Qt::SmoothTransformation));warehouseTable->setCellWidget(r,0,photo);
    for(int c=1;c<7;++c){int src=c==1?1:c==2?2:c==3?3:c==4?4:c==5?5:6;auto *it=new QTableWidgetItem(q.value(src).toString());if(c>=3)it->setTextAlignment(Qt::AlignCenter);warehouseTable->setItem(r,c,it);}
-   warehouseTable->setRowHeight(r,68);int qty=q.value(3).toInt(),res=q.value(4).toInt();if(qty-res<=q.value(6).toInt())for(int c=3;c<=5;++c)warehouseTable->item(r,c)->setForeground(QColor("#d97706"));count++;physical+=qty;reserved+=res;available+=qty-res;
+   warehouseTable->setRowHeight(r,68);int qty=q.value(3).toInt(),res=q.value(4).toInt();if(qty-res<=q.value(6).toInt())for(int c=3;c<=5;++c)warehouseTable->item(r,c)->setForeground(QColor("#BC4B09"));count++;physical+=qty;reserved+=res;available+=qty-res;
   }warehouseTable->setColumnWidth(0,82);warehouseTable->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch);
   if(warehouseSummary)warehouseSummary->setText(QString("URUN CESIDI  %1      FIZIKI  %2      REZERVE  %3      KULLANILABILIR  %4").arg(count).arg(physical).arg(reserved).arg(available));
  }
@@ -325,26 +326,7 @@ class BackofficeWindow:public QMainWindow{
  void exportCsv(){QString file=QFileDialog::getSaveFileName(this,"CSV aktar","kasapro_rapor.csv","CSV (*.csv)");if(file.isEmpty())return;QFile f(file);if(!f.open(QIODevice::WriteOnly|QIODevice::Text))return failure("Dosya yazilamadi.");QTextStream out(&f);out.setEncoding(QStringConverter::Utf8);out<<QChar(0xFEFF);QStringList hs;for(int c=0;c<table->columnCount();c++)hs<<'"'+table->horizontalHeaderItem(c)->text().replace('"',"\"\"")+'"';out<<hs.join(';')<<'\n';for(int r=0;r<table->rowCount();r++){QStringList vals;for(int c=0;c<table->columnCount();c++){QString s=table->item(r,c)?table->item(r,c)->text():"";s.replace('"',"\"\"");vals<<'"'+s+'"';}out<<vals.join(';')<<'\n';}message("CSV kaydedildi.");}
 public:
  BackofficeWindow(){setWindowTitle("KasaPro | Enterprise POS ve Depo v0.2");resize(1540,960);
- setStyleSheet(R"QSS(
- QMainWindow,QWidget{background:#f3f6fb;color:#192c48;font-family:'Segoe UI';font-size:12px}
- QLabel#heading{font-size:27px;font-weight:800;color:#102641;padding:8px 2px}
- QLabel#sectionTitle{font-size:15px;font-weight:800;color:#173c63;letter-spacing:1px}
- QLabel#muted{color:#6b7d94;font-size:12px}
- QLabel#productPreview{background:white;border:1px solid #d9e4f2;border-radius:15px;color:#8999ad;font-weight:700}
- QLabel#warehouseSummary{background:#e3edf9;border:1px solid #ccdff2;border-radius:12px;padding:18px;font-size:15px;font-weight:800;color:#123b6c}
- QTabWidget::pane{border:1px solid #dce6f3;background:#fff;border-radius:12px;padding:12px}
- QTabBar::tab{padding:16px 24px;background:#e9eff7;margin-right:5px;border-top-left-radius:10px;border-top-right-radius:10px;font-weight:700;color:#506785}
- QTabBar::tab:selected{background:#173d70;color:#fff}
- QPushButton{background:#184c86;color:white;padding:11px 17px;border:0;border-radius:8px;font-weight:700;min-height:17px}
- QPushButton:hover{background:#2674b5}
- QPushButton:pressed{background:#102d52}
- QTableWidget{background:white;alternate-background-color:#f3f7fc;border:1px solid #e0e7f2;border-radius:9px;gridline-color:#eaf0f8;selection-background-color:#dbeaff;selection-color:#173d70}
- QHeaderView::section{background:#eaf1f9;color:#435e7c;border:none;padding:12px;font-weight:800}
- QLineEdit,QComboBox,QSpinBox,QDoubleSpinBox{background:#fff;padding:10px;border:1px solid #ccd9e9;border-radius:8px;min-height:16px}
- QLineEdit:focus,QComboBox:focus{border:1px solid #277bc3}
- QDialog{background:#f7f9fc}
- QStatusBar{background:#173d70;color:white}
- )QSS");
+ /* stil: FluentDesign::apply */
  auto *central=new QWidget;setCentralWidget(central);auto *base=new QVBoxLayout(central);auto *heading=new QLabel("KasaPro  /  Isletme Yonetim Merkezi");heading->setObjectName("heading");base->addWidget(heading);dashboardLabel=new QLabel;base->addWidget(dashboardLabel);tabs=new QTabWidget;base->addWidget(tabs);
  auto *pos=new QWidget;auto *pv=new QVBoxLayout(pos);auto *controls=new QHBoxLayout;product=new QComboBox;product->setMinimumWidth(260);warehouse=new QComboBox;customer=new QComboBox;payment=new QComboBox;payment->addItems({"Nakit","Kart","Veresiye"});quantity=new QSpinBox;quantity->setRange(1,100000);auto *add=new QPushButton("Sepete Ekle");controls->addWidget(new QLabel("Urun"));controls->addWidget(product,3);controls->addWidget(new QLabel("Depo"));controls->addWidget(warehouse);controls->addWidget(new QLabel("Cari"));controls->addWidget(customer);controls->addWidget(new QLabel("Adet"));controls->addWidget(quantity);controls->addWidget(add);pv->addLayout(controls);
  auto *productStrip=new QHBoxLayout;productPreview=new QLabel("URUN GORSELI YOK");productPreview->setFixedSize(168,150);productPreview->setAlignment(Qt::AlignCenter);productPreview->setObjectName("productPreview");productStrip->addWidget(productPreview);auto *info=new QVBoxLayout;auto *infoHead=new QLabel("SECILI URUN / DEPO STOK BILGISI");infoHead->setObjectName("sectionTitle");info->addWidget(infoHead);availabilityLabel=new QLabel;availabilityLabel->setWordWrap(true);info->addWidget(availabilityLabel);auto *tip=new QLabel("Depo secimini degistirerek satis oncesi rezerve ve kullanilabilir miktari kontrol edin.");tip->setWordWrap(true);tip->setObjectName("muted");info->addWidget(tip);info->addStretch();productStrip->addLayout(info,1);pv->addLayout(productStrip);
@@ -365,8 +347,8 @@ public:
 #include <QPointer>
 #include <functional>
 
-static QString orangeButton(){return "QPushButton{background:#ff542b;color:white;border:0;border-radius:12px;padding:12px;font-weight:700;}QPushButton:hover{background:#e84524;}";}
-static QString paleButton(){return "QPushButton{background:white;color:#283341;border:1px solid #e2e8ee;border-radius:14px;padding:12px;font-weight:650;}QPushButton:hover{border:1px solid #ff542b;}";}
+static QString orangeButton(){return "QPushButton{background:#0F6CBD;color:#FFFFFF;border:1px solid #0F6CBD;border-radius:4px;padding:8px 16px;font-weight:600;}QPushButton:hover{background:#115EA3;border-color:#115EA3;}QPushButton:pressed{background:#0F548C;}";}
+static QString paleButton(){return "QPushButton{background:#FFFFFF;color:#242424;border:1px solid #D1D1D1;border-bottom-color:#8A8A8A;border-radius:4px;padding:8px 16px;}QPushButton:hover{background:#F5F5F5;}QPushButton:pressed{background:#E0E0E0;}";}
 
 
 // Management workspace deliberately has its own modern UI; legacy BackofficeWindow
@@ -603,7 +585,7 @@ class ManagementCenter final : public QDialog {
     void cashAuditDialog(){
         QDialog d(this);d.setWindowTitle("Kasa Kontrol / Hareket Dökümü");d.resize(870,620);
         auto *layout=new QVBoxLayout(&d);
-        auto *summary=new QLabel;summary->setStyleSheet("font-size:19px;font-weight:800;color:#0e8276;padding:14px;background:#edf8f5;border-radius:10px;");
+        auto *summary=new QLabel;summary->setStyleSheet("font-size:19px;font-weight:600;color:#0F548C;padding:14px;background:#EBF3FC;border-radius:8px;");
         layout->addWidget(summary);
         auto *dateBar=new QHBoxLayout;auto *start=new QDateEdit(QDate::currentDate());auto *end=new QDateEdit(QDate::currentDate());start->setCalendarPopup(true);end->setCalendarPopup(true);dateBar->addWidget(new QLabel("Başlangıç"));dateBar->addWidget(start);dateBar->addWidget(new QLabel("Bitiş"));dateBar->addWidget(end);layout->addLayout(dateBar);
         auto *table=new QTableWidget;table->setColumnCount(5);table->setHorizontalHeaderLabels({"ID","Tarih","Tür","Tutar","Açıklama"});table->setEditTriggers(QAbstractItemView::NoEditTriggers);layout->addWidget(table);
@@ -634,7 +616,7 @@ class ManagementCenter final : public QDialog {
         while(suppliers.next())supplier->addItem(suppliers.value(1).toString(),suppliers.value(0));
         auto *status=new QComboBox;status->addItems({"Açık borçlar","Tüm belgeler","Vadesi geçmiş"});
         header->addWidget(new QLabel("Tedarikçi:"));header->addWidget(supplier,2);header->addWidget(new QLabel("Filtre:"));header->addWidget(status);layout->addLayout(header);
-        auto *summary=new QLabel;summary->setStyleSheet("font-size:17px;font-weight:700;padding:12px;background:#e9f7f5;border-radius:9px;");layout->addWidget(summary);
+        auto *summary=new QLabel;summary->setStyleSheet("font-size:17px;font-weight:600;padding:12px;background:#EBF3FC;border-radius:4px;");layout->addWidget(summary);
         auto *table=new QTableWidget;table->setColumnCount(8);table->setHorizontalHeaderLabels({"Borç ID","Tedarikçi","Sipariş","Belge","Tutar","Ödenen","Kalan","Vade"});table->setSelectionBehavior(QAbstractItemView::SelectRows);table->setEditTriggers(QAbstractItemView::NoEditTriggers);table->setAlternatingRowColors(true);table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);layout->addWidget(table,1);
         auto reload=[&](){
             table->setRowCount(0);qint64 original=0,paid=0;int count=0;
@@ -642,7 +624,7 @@ class ManagementCenter final : public QDialog {
             while(q.next()){
                 int row=table->rowCount();table->insertRow(row);const qint64 o=q.value(4).toLongLong(),a=q.value(5).toLongLong();original+=o;paid+=a;++count;
                 QStringList values={q.value(0).toString(),q.value(1).toString(),q.value(2).toString(),q.value(3).toString(),money(o),money(a),money(o-a),q.value(6).toString()};
-                for(int col=0;col<values.size();++col){auto *item=new QTableWidgetItem(values[col]);if(col==6&&o>a&&q.value(6).toString()<QDate::currentDate().toString(Qt::ISODate))item->setForeground(QColor("#b91c1c"));table->setItem(row,col,item);}
+                for(int col=0;col<values.size();++col){auto *item=new QTableWidgetItem(values[col]);if(col==6&&o>a&&q.value(6).toString()<QDate::currentDate().toString(Qt::ISODate))item->setForeground(QColor("#C50F1F"));table->setItem(row,col,item);}
             }
             summary->setText(QString("%1 belge  |  Toplam %2  |  Ödenen %3  |  Kalan %4").arg(count).arg(money(original)).arg(money(paid)).arg(money(original-paid)));
         };
@@ -677,7 +659,7 @@ class ManagementCenter final : public QDialog {
     void purchaseCenter(){
       QDialog d(this);d.setWindowTitle("Satın Alma Merkezi | Tedarikçi Siparişi ve Mal Kabul");d.resize(1060,690);
       auto *root=new QVBoxLayout(&d);
-      auto *headline=new QLabel("SATIN ALMA  /  SİPARİŞ VE MAL KABUL");headline->setStyleSheet("font-size:21px;font-weight:850;color:#183047;padding:8px;");root->addWidget(headline);
+      auto *headline=new QLabel("SATIN ALMA  /  SİPARİŞ VE MAL KABUL");headline->setStyleSheet("font-size:21px;font-weight:600;color:#242424;padding:8px;");root->addWidget(headline);
       auto *top=new QHBoxLayout;auto *supplier=new QComboBox;auto *depot=new QComboBox;
       QSqlQuery suppliers=query("SELECT id,name FROM parties WHERE kind IN ('Tedarikci','Her ikisi') ORDER BY name");
       while(suppliers.next())supplier->addItem(suppliers.value(1).toString(),suppliers.value(0));
@@ -692,7 +674,7 @@ class ManagementCenter final : public QDialog {
       auto *add=new QPushButton("+ Siparişe ekle");inputs->addWidget(products,4);inputs->addWidget(new QLabel("Miktar"));inputs->addWidget(quantity);inputs->addWidget(new QLabel("Birim alış"));inputs->addWidget(cost);inputs->addWidget(add);root->addLayout(inputs);
       auto *lines=new QTableWidget;lines->setColumnCount(4);lines->setHorizontalHeaderLabels({"Ürün","Miktar","Birim maliyet","Satır toplamı"});lines->horizontalHeader()->setSectionResizeMode(0,QHeaderView::Stretch);lines->setSelectionBehavior(QAbstractItemView::SelectRows);lines->setEditTriggers(QAbstractItemView::NoEditTriggers);root->addWidget(lines,1);
       struct Line{int pid;QString name;int qty;qint64 unit;};QVector<Line> orderLines;
-      auto *sum=new QLabel("Toplam: 0,00 TL");sum->setStyleSheet("color:#0b9489;font-size:20px;font-weight:800;");root->addWidget(sum);
+      auto *sum=new QLabel("Toplam: 0,00 TL");sum->setStyleSheet("color:#242424;font-size:20px;font-weight:600;");root->addWidget(sum);
       auto redraw=[&](){lines->setRowCount(0);qint64 total=0;for(const auto &line:orderLines){const int row=lines->rowCount();lines->insertRow(row);const qint64 lineTotal=line.qty*line.unit;total+=lineTotal;QStringList cells={line.name,QString::number(line.qty),money(line.unit),money(lineTotal)};for(int c=0;c<4;++c)lines->setItem(row,c,new QTableWidgetItem(cells[c]));}sum->setText("Toplam: "+money(total));};
       connect(add,&QPushButton::clicked,&d,[&]{if(products->currentIndex()<0)return;orderLines.append({products->currentData().toInt(),products->currentText(),quantity->value(),toCents(cost->value())});redraw();});
       auto *bottom=new QHBoxLayout;auto *remove=new QPushButton("Satırı kaldır");auto *save=new QPushButton("Siparişi oluştur");auto *receive=new QPushButton("Seçili siparişi mal kabul et");auto *close=new QPushButton("Kapat");
@@ -752,8 +734,8 @@ public:
     }
     explicit ManagementCenter(const QString &initial,QWidget *parent=nullptr):QDialog(parent){
         setWindowTitle("KasaPro Enterprise • Yönetim Merkezi V2.9");setMinimumSize(820,580);resize(1290,810);
-        setStyleSheet(R"QSS(QDialog{background:#f4f6f8;color:#1d2938;font-family:'Segoe UI';font-size:13px} QListWidget#navigation{background:#17263c;border:0;color:#dfe8f4;font-size:14px;outline:none;} QListWidget#navigation::item{padding:16px 15px;margin:3px 10px;border-radius:10px;} QListWidget#navigation::item:selected{background:#ff592e;color:#fff;} QFrame#body{background:#ffffff;border-radius:16px;} QLabel#title{font-size:27px;font-weight:900;color:#1c2d40;} QLabel#stats{background:#eaf6f4;color:#087d75;padding:15px;border-radius:11px;font-weight:800;} QLineEdit{background:#fff;border:1px solid #d7dfe8;border-radius:10px;padding:12px;} QTableWidget{background:#fff;gridline-color:#f0f2f5;alternate-background-color:#fafcff;border:1px solid #e5eaf0;border-radius:10px;selection-background-color:#ffe2d9;selection-color:#17263c;} QHeaderView::section{background:#edf2f7;color:#54657b;padding:12px;border:0;font-weight:700;} QPushButton{padding:11px 17px;border-radius:10px;background:#fff;border:1px solid #e0e5eb;font-weight:700;color:#26374b;} QPushButton#primary{background:#ff592e;color:white;border:0;} QPushButton#toolbarAction{padding:8px 12px;min-height:39px;font-size:12px;} QScrollArea#managementToolbarScroll{background:transparent;border:none;} QWidget#managementToolbarPanel{background:transparent;} QPushButton:hover{border:1px solid #ff592e;})QSS");
-        auto *root=new QHBoxLayout(this);root->setContentsMargins(0,0,0,0);root->setSpacing(0);auto *side=new QWidget;side->setFixedWidth(UiDesign::kSidebarWidth);side->setStyleSheet("background:#17263c;");auto *sv=new QVBoxLayout(side);auto *logo=new QLabel("KasaPro  <span style='color:#ff592e'>●</span>");logo->setStyleSheet("color:white;font-size:25px;font-weight:900;margin:19px 14px;");sv->addWidget(logo);nav=new QListWidget;nav->setObjectName("navigation");nav->addItems(modules);sv->addWidget(nav,1);auto *back=new QPushButton("← POS Ekranına Dön");sv->addWidget(back);connect(back,&QPushButton::clicked,this,&QDialog::accept);root->addWidget(side);
+        /* stil: FluentDesign::apply */
+        auto *root=new QHBoxLayout(this);root->setContentsMargins(0,0,0,0);root->setSpacing(0);auto *side=new QWidget;side->setFixedWidth(UiDesign::kSidebarWidth);side->setObjectName("navPane");auto *sv=new QVBoxLayout(side);auto *logo=new QLabel("KasaPro  <span style='color:#0F6CBD'>●</span>");logo->setStyleSheet("color:#242424;font-size:20px;font-weight:600;margin:20px 16px 12px 16px;");sv->addWidget(logo);nav=new QListWidget;nav->setObjectName("navigation");nav->addItems(modules);sv->addWidget(nav,1);auto *back=new QPushButton("← POS Ekranına Dön");sv->addWidget(back);connect(back,&QPushButton::clicked,this,&QDialog::accept);root->addWidget(side);
         auto *body=new QFrame;body->setObjectName("body");auto *v=new QVBoxLayout(body);v->setContentsMargins(18,16,18,18);v->setSpacing(16);auto *headerRow=new QHBoxLayout;
         auto *labels=new QVBoxLayout;
         labels->setSpacing(3);
@@ -762,7 +744,7 @@ public:
         heading->setMinimumWidth(0);heading->setWordWrap(true);
         labels->addWidget(heading);
         subheading=new QLabel;
-        subheading->setStyleSheet("color:#8a9aab;");
+        subheading->setStyleSheet("color:#616161;");
         labels->addWidget(subheading);
         headerRow->addLayout(labels,1);
         fullscreenButton=new QPushButton("⛶ Tam Ekran");fullscreenButton->setToolTip("F11 ile tam ekran değiştir");headerRow->addWidget(fullscreenButton,0,Qt::AlignTop);connect(fullscreenButton,&QPushButton::clicked,this,[this]{toggleFullscreen();});
@@ -842,10 +824,10 @@ public:
         const QStringList cardNames={"BUGÜNKÜ SATIŞ","KASA BAKİYESİ","ÜRÜN SAYISI","CARİ SAYISI","KRİTİK STOK SATIRI","BEKLEYEN ALIŞ"};
         for(int i=0;i<cardNames.size();++i){
             auto *card=new QFrame;card->setObjectName("kpiCard");
-            card->setStyleSheet("QFrame#kpiCard{background:white;border:1px solid #e0e7ef;border-radius:12px;}");
+            card->setStyleSheet("QFrame#kpiCard{background:white;border:1px solid #E0E0E0;border-radius:8px;}");
             auto *box=new QVBoxLayout(card);box->setContentsMargins(15,11,15,11);box->setSpacing(5);
-            auto *label=new QLabel(cardNames.at(i));label->setStyleSheet("color:#6a7a8c;font-size:11px;font-weight:700;");
-            auto *value=new QLabel("—");value->setStyleSheet("color:#18334f;font-size:20px;font-weight:800;");
+            auto *label=new QLabel(cardNames.at(i));label->setStyleSheet("color:#616161;font-size:11px;font-weight:600;");
+            auto *value=new QLabel("—");value->setStyleSheet("color:#242424;font-size:20px;font-weight:600;");
             value->setTextInteractionFlags(Qt::TextSelectableByMouse);
             box->addWidget(label);box->addWidget(value);
             dashboardValues.append(value);
@@ -878,12 +860,12 @@ static bool initSalesReturns(){
 static void salesReturnCenter(QWidget *parent){
  QDialog dialog(parent); dialog.setWindowTitle("KasaPro | Satış İadeleri");dialog.resize(1030,740);
  auto *layout=new QVBoxLayout(&dialog);
- auto *title=new QLabel("Satış İadesi ve Satış Geçmişi");title->setStyleSheet("font-size:23px;font-weight:800;color:#1e384e");layout->addWidget(title);
+ auto *title=new QLabel("Satış İadesi ve Satış Geçmişi");title->setStyleSheet("font-size:23px;font-weight:600;color:#242424");layout->addWidget(title);
  auto *help=new QLabel("Yalnızca tamamı nakit veya tamamı veresiye satışlarda muhasebeli iade yapılır. Kart/karma ödemeler için resmi cihaz/banka iadesi gerekir.");help->setWordWrap(true);layout->addWidget(help);
  auto *filter=new QLineEdit;filter->setPlaceholderText("Satış belge numarası veya müşteri adı...");layout->addWidget(filter);
  auto *sales=new QTableWidget;sales->setColumnCount(5);sales->setHorizontalHeaderLabels({"Belge", "Tarih", "Müşteri", "Tutar", "Ödeme"});sales->setSelectionBehavior(QAbstractItemView::SelectRows);sales->setSelectionMode(QAbstractItemView::SingleSelection);sales->setEditTriggers(QAbstractItemView::NoEditTriggers);sales->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);layout->addWidget(sales,2);
  auto *lines=new QTableWidget;lines->setColumnCount(6);lines->setHorizontalHeaderLabels({"Satır ID","Ürün","Depo","Satılan","İade edilmiş","Birim fiyat"});lines->setSelectionBehavior(QAbstractItemView::SelectRows);lines->setSelectionMode(QAbstractItemView::SingleSelection);lines->setEditTriggers(QAbstractItemView::NoEditTriggers);lines->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);lines->hideColumn(0);layout->addWidget(lines,2);
- auto *actions=new QHBoxLayout;auto *qty=new QSpinBox;qty->setRange(1,1000000);auto *reason=new QLineEdit;reason->setPlaceholderText("İade gerekçesi (zorunlu)");auto *refund=new QPushButton("Seçili Satırı İade Et");refund->setStyleSheet("background:#ef572d;color:white;font-weight:bold;padding:12px;border-radius:8px");auto *receipt=new QPushButton("Satış Bilgi Fişi Kaydet");auto *printReceipt=new QPushButton("58/80 mm Fiş Yazdır");actions->addWidget(new QLabel("İade adedi"));actions->addWidget(qty);actions->addWidget(reason,1);actions->addWidget(refund);layout->addLayout(actions);layout->addWidget(receipt);layout->addWidget(printReceipt);
+ auto *actions=new QHBoxLayout;auto *qty=new QSpinBox;qty->setRange(1,1000000);auto *reason=new QLineEdit;reason->setPlaceholderText("İade gerekçesi (zorunlu)");auto *refund=new QPushButton("Seçili Satırı İade Et");refund->setStyleSheet("background:#C50F1F;color:white;font-weight:600;padding:12px;border-radius:4px");auto *receipt=new QPushButton("Satış Bilgi Fişi Kaydet");auto *printReceipt=new QPushButton("58/80 mm Fiş Yazdır");actions->addWidget(new QLabel("İade adedi"));actions->addWidget(qty);actions->addWidget(reason,1);actions->addWidget(refund);layout->addLayout(actions);layout->addWidget(receipt);layout->addWidget(printReceipt);
  auto selectedSale=[&]()->int{auto *item=sales->item(sales->currentRow(),0);return item?item->text().toInt():0;};
  auto reloadSales=[&](){sales->setRowCount(0);QSqlQuery q=query("SELECT d.id,d.created_at,COALESCE(p.name,'Perakende'),d.total_cents,COALESCE(GROUP_CONCAT(pay.method||':'||pay.amount_cents),'-') FROM docs d LEFT JOIN parties p ON p.id=d.party_id LEFT JOIN pos_payments pay ON pay.doc_id=d.id WHERE d.doc_type='Satis' AND d.status='Tamamlandi' AND (CAST(d.id AS TEXT) LIKE ? OR COALESCE(p.name,'') LIKE ?) GROUP BY d.id ORDER BY d.id DESC LIMIT 250",{"%"+filter->text().trimmed()+"%","%"+filter->text().trimmed()+"%"});while(q.next()){int r=sales->rowCount();sales->insertRow(r);QStringList values={q.value(0).toString(),q.value(1).toString(),q.value(2).toString(),money(q.value(3).toLongLong()),q.value(4).toString()};for(int i=0;i<values.size();++i)sales->setItem(r,i,new QTableWidgetItem(values.at(i)));}};
  auto reloadLines=[&](){lines->setRowCount(0);int sale=selectedSale();if(sale<1)return;QSqlQuery q=query("SELECT l.id,p.name,w.name,l.qty,COALESCE((SELECT SUM(rl.qty) FROM sale_return_lines rl JOIN sale_returns sr ON sr.id=rl.return_id WHERE rl.sale_line_id=l.id),0),l.unit_cents FROM doc_lines l JOIN products p ON p.id=l.product_id JOIN warehouses w ON w.id=l.warehouse_id WHERE l.doc_id=?",{sale});while(q.next()){int r=lines->rowCount();lines->insertRow(r);for(int c=0;c<6;c++){auto *item=new QTableWidgetItem(c==5?money(q.value(c).toLongLong()):q.value(c).toString());lines->setItem(r,c,item);}}};
@@ -972,7 +954,7 @@ class PosWindow final:public QMainWindow {
     QPixmap picture(const QString &path,int w,int h){QPixmap image(path);return image.isNull()?QPixmap():image.scaled(w,h,Qt::KeepAspectRatio,Qt::SmoothTransformation);}
     void refreshDepot(){int old=depotId;depotPicker->blockSignals(true);depotPicker->clear();auto q=query("SELECT id,name FROM warehouses ORDER BY name");while(q.next())depotPicker->addItem(q.value(1).toString(),q.value(0));int idx=depotPicker->findData(old);if(idx>=0)depotPicker->setCurrentIndex(idx);depotId=depotPicker->currentData().toInt();depotPicker->blockSignals(false);}
     int available(int id){auto q=query("SELECT COALESCE(qty-reserved,0) FROM stock WHERE product_id=? AND warehouse_id=?",{id,depotId});return q.next()?q.value(0).toInt():0;}
-    void refreshCart(){wipe(cartRows);for(const BasketLine &item:basket){auto *line=new QFrame;line->setStyleSheet("QFrame{background:#fff;border-bottom:1px solid #e7ecef;} QLabel{border:0;background:transparent;}");auto *layout=new QHBoxLayout(line);layout->setContentsMargins(4,7,4,7);
+    void refreshCart(){wipe(cartRows);for(const BasketLine &item:basket){auto *line=new QFrame;line->setStyleSheet("QFrame{background:#fff;border-bottom:1px solid #E0E0E0;} QLabel{border:0;background:transparent;}");auto *layout=new QHBoxLayout(line);layout->setContentsMargins(4,7,4,7);
       auto *photo=new QLabel;photo->setFixedSize(45,48);photo->setAlignment(Qt::AlignCenter);auto pm=picture(item.image,43,43);if(pm.isNull())photo->setText("📦");else photo->setPixmap(pm);layout->addWidget(photo);
       auto *name=new QLabel(item.title);name->setWordWrap(true);name->setMinimumWidth(85);layout->addWidget(name,1);
       auto *less=new QPushButton("−");less->setFixedSize(30,30);less->setStyleSheet(orangeButton());layout->addWidget(less);
@@ -1053,7 +1035,7 @@ class PosWindow final:public QMainWindow {
       auto *layout=new QVBoxLayout(&dialog);
       QSqlQuery parent=query("SELECT name FROM products WHERE id=?",{parentId});
       const QString parentName=parent.next()?parent.value(0).toString():QString("Ürün #%1").arg(parentId);
-      auto *title=new QLabel(parentName);title->setWordWrap(true);title->setStyleSheet("font-size:18px;font-weight:800;");layout->addWidget(title);
+      auto *title=new QLabel(parentName);title->setWordWrap(true);title->setStyleSheet("font-size:18px;font-weight:600;");layout->addWidget(title);
       auto *hint=new QLabel("Mevcut depodaki kullanılabilir stok gösterilir. Stok yoksa seçenek sepete eklenemez.");hint->setWordWrap(true);layout->addWidget(hint);
       auto *filter=new QLineEdit;filter->setPlaceholderText("Beden, numara, renk veya stok koduyla filtrele...");layout->addWidget(filter);
       auto *table=new QTableWidget;table->setColumnCount(6);
@@ -1084,7 +1066,7 @@ class PosWindow final:public QMainWindow {
           const QStringList values={q.value(1).toString(),q.value(2).toString(),q.value(3).toString(),
              q.value(4).toString(),money(q.value(5).toLongLong()),QString::number(free)};
           for(int col=0;col<6;++col){auto *cell=new QTableWidgetItem(values[col]);
-            if(free<=0)cell->setForeground(QColor("#9CA3AF"));table->setItem(row,col,cell);}
+            if(free<=0)cell->setForeground(QColor("#A3A3A3"));table->setItem(row,col,cell);}
           table->item(row,0)->setData(Qt::UserRole,itemId);
           table->item(row,0)->setData(Qt::UserRole+1,free);
           if(free>0)++availableRows;
@@ -1218,30 +1200,30 @@ class PosWindow final:public QMainWindow {
         auto *tile=new QPushButton;
         tile->setFixedSize(cardWidth,152);
         tile->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
-        tile->setStyleSheet("QPushButton{background:white;border:1px solid #e3e9ec;border-radius:11px;padding:0px;text-align:center;}QPushButton:hover{border:2px solid #ff542b;background:#fffdfb;}QPushButton:disabled{background:#f5f6f8;color:#9ca3af;}");
+        tile->setStyleSheet(FluentDesign::tileQss());
         auto *content=new QVBoxLayout(tile);
         content->setContentsMargins(4,4,4,4);
         content->setSpacing(3);
         auto *photo=new QLabel;photo->setFixedHeight(77);photo->setAlignment(Qt::AlignCenter);photo->setAttribute(Qt::WA_TransparentForMouseEvents);
         QPixmap px=picture(products.value(3).toString(),140,76);
-        if(px.isNull()){photo->setText("▣");photo->setStyleSheet("font-size:25px;color:#a7b6c6;background:#f1f5f8;border-radius:8px;");}
+        if(px.isNull()){photo->setText("▣");photo->setStyleSheet("font-size:25px;color:#8A8A8A;background:#F5F5F5;border-radius:4px;");}
         else photo->setPixmap(px);
         content->addWidget(photo);
         auto *name=new QLabel(title);name->setFixedHeight(18);name->setAlignment(Qt::AlignCenter);name->setAttribute(Qt::WA_TransparentForMouseEvents);
-        name->setStyleSheet("font-size:11px;font-weight:650;background:transparent;");
+        name->setStyleSheet("font-size:11px;font-weight:600;background:transparent;");
         name->setText(QFontMetrics(name->font()).elidedText(title,Qt::ElideRight,143));
         name->setToolTip(title);content->addWidget(name);
         auto *price=new QLabel(money(products.value(2).toLongLong()));price->setAlignment(Qt::AlignCenter);
-        price->setStyleSheet("color:#00a8a0;font-size:14px;font-weight:850;background:transparent;");
+        price->setStyleSheet("color:#242424;font-size:14px;font-weight:600;background:transparent;");
         price->setAttribute(Qt::WA_TransparentForMouseEvents);content->addWidget(price);
         auto *quantity=new QLabel(stock>0?QString("Stok: %1").arg(stock):"Stok yok");
-        quantity->setAlignment(Qt::AlignCenter);quantity->setStyleSheet(stock>0?"font-size:10px;color:#8091a4;background:transparent;":"font-size:10px;color:#de3c35;background:transparent;");
+        quantity->setAlignment(Qt::AlignCenter);quantity->setStyleSheet(stock>0?"font-size:10px;color:#616161;background:transparent;":"font-size:10px;color:#C50F1F;background:transparent;");
         quantity->setAttribute(Qt::WA_TransparentForMouseEvents);content->addWidget(quantity);
         const bool parentWithVariants=hasVariants(id);
         const int stockedVariants=parentWithVariants?availableVariantCount(id):0;
         if(parentWithVariants){
           quantity->setText(QString("%1 stoklu seçenek").arg(stockedVariants));
-          quantity->setStyleSheet(stockedVariants>0?"font-size:10px;color:#177e78;background:transparent;":"font-size:10px;color:#de3c35;background:transparent;");
+          quantity->setStyleSheet(stockedVariants>0?"font-size:10px;color:#107C10;background:transparent;":"font-size:10px;color:#C50F1F;background:transparent;");
         }
         tile->setEnabled(parentWithVariants?stockedVariants>0:stock>0);
         connect(tile,&QPushButton::clicked,this,[this,id,parentWithVariants]{
@@ -1339,7 +1321,7 @@ class PosWindow final:public QMainWindow {
       if(basket.isEmpty())return alert("Sepet boş.");
       const qint64 totalCents=cartTotal();
       QDialog dlg(this);dlg.setWindowTitle("Parçalı Ödeme");dlg.setMinimumSize(480,420);auto *v=new QVBoxLayout(&dlg);
-      auto *heading=new QLabel("ÖDENECEK  "+money(totalCents));heading->setAlignment(Qt::AlignCenter);heading->setStyleSheet("font-size:25px;font-weight:800;color:#139e9a;");v->addWidget(heading);
+      auto *heading=new QLabel("ÖDENECEK  "+money(totalCents));heading->setAlignment(Qt::AlignCenter);heading->setStyleSheet("font-size:25px;font-weight:600;color:#242424;");v->addWidget(heading);
       auto *form=new QFormLayout;auto *cash=new QDoubleSpinBox;auto *card=new QDoubleSpinBox;auto *credit=new QDoubleSpinBox;
       for(QDoubleSpinBox *spin:{cash,card,credit}){spin->setDecimals(2);spin->setRange(0,100000000);spin->setSuffix(" TL");}
       cash->setValue(totalCents/100.0);form->addRow("Nakit",cash);form->addRow("Kart",card);form->addRow("Veresiye",credit);v->addLayout(form);
@@ -1471,9 +1453,9 @@ class PosWindow final:public QMainWindow {
     QPushButton *posFullscreenButton=nullptr;
     void togglePosFullscreen(){posFullscreen=!isFullScreen();if(posFullscreen)showFullScreen();else showNormal();if(posFullscreenButton)posFullscreenButton->setText(posFullscreen?"❐ Pencere":"⛶ Tam Ekran");QSettings settings("KasaPro","KasaPro");settings.setValue("ui/posFullscreen",posFullscreen);}
     void officePopup(const QString &section){ManagementCenter dialog(section,this);dialog.exec();refreshDepot();refreshCategories();refreshProducts();refreshCart();}
-    QPushButton *action(const QString &name,const QString &color="#ff542b"){auto *b=new QPushButton(name);b->setMinimumHeight(53);b->setStyleSheet(QString("QPushButton{background:%1;color:white;border:0;border-radius:11px;font-weight:750;padding:8px;}QPushButton:hover{border:2px solid #273444;}").arg(color));return b;}
+    QPushButton *action(const QString &name,const QString &role="accent"){auto *b=new QPushButton(name);b->setMinimumHeight(UiDesign::kTouchTarget+4);FluentDesign::setRole(b,role.toLatin1().constData());return b;}
 public:
-    PosWindow(){setWindowTitle("KasaPro Enterprise | POS V2.6");resize(1460,870);setMinimumSize(900,620);setStyleSheet("QMainWindow{background:#f4f6f8;} QWidget{font-family:'Segoe UI';font-size:12px;color:#293442;} QScrollArea{border:0;} QLineEdit,QComboBox{background:white;border:1px solid #dfe5eb;border-radius:9px;padding:9px;} QDialog{background:#f8fafc;}");
+    PosWindow(){setWindowTitle("KasaPro Enterprise | POS V2.6");resize(1460,870);setMinimumSize(900,620);
       auto *base=new QWidget;
       setCentralWidget(base);
       auto *root=new QVBoxLayout(base);
@@ -1481,12 +1463,12 @@ public:
       root->setSpacing(8);
       auto *top=new QFrame;
       top->setObjectName("posHeader");
-      top->setStyleSheet("QFrame#posHeader{background:white;border-radius:12px;}");
+      top->setStyleSheet("QFrame#posHeader{background:white;border-radius:8px;}");
       auto *topColumn=new QVBoxLayout(top);
       topColumn->setContentsMargins(14,9,14,9);
       topColumn->setSpacing(8);
       auto *identityRow=new QHBoxLayout;
-      auto *logo=new QLabel("<span style='color:#fa502d;font-size:26px;font-weight:900'>KasaPro</span>");
+      auto *logo=new QLabel("<span style='color:#0F6CBD;font-size:26px;font-weight:600'>KasaPro</span>");
       identityRow->addWidget(logo);
       auto *order=new QLabel("POS  •  Mağaza içi satış");
       identityRow->addSpacing(14);
@@ -1534,17 +1516,17 @@ public:
       content->setSpacing(10);
       root->addLayout(content,1);
 
-      auto *left=new QFrame;left->setMinimumWidth(300);left->setMaximumWidth(450);left->setStyleSheet("QFrame{background:white;border-radius:13px;}");content->addWidget(left,4);auto *lv=new QVBoxLayout(left);auto *cartTop=new QHBoxLayout;auto *cartTitle=new QLabel("SEPET");cartTitle->setStyleSheet("font-weight:800;font-size:16px");cartTop->addWidget(cartTitle);cartTop->addStretch();countLabel=new QLabel;cartTop->addWidget(countLabel);lv->addLayout(cartTop);auto *cartScroll=new QScrollArea;cartScroll->setWidgetResizable(true);cartHolder=new QWidget;cartRows=new QVBoxLayout(cartHolder);cartRows->setContentsMargins(0,0,0,0);cartScroll->setWidget(cartHolder);lv->addWidget(cartScroll,1);auto *s1=new QHBoxLayout;s1->addWidget(new QLabel("Ara toplam"));s1->addStretch();subtotal=new QLabel;s1->addWidget(subtotal);lv->addLayout(s1);auto *g=new QFrame;g->setStyleSheet("background:#e9f7f6;border-radius:10px;");auto *gl=new QHBoxLayout(g);gl->addWidget(new QLabel("GENEL TOPLAM"));gl->addStretch();grand=new QLabel;grand->setStyleSheet("font-size:20px;font-weight:900;color:#16a7a2;");gl->addWidget(grand);lv->addWidget(g);auto *quick=new QGridLayout;auto *holdBtn=action("Beklet","#7163c9");auto *restoreBtn=action("Bekleyenler","#666a77");auto *clearBtn=action("Temizle","#ef6946");auto *payBtn=action("ÖDEME AL","#25a33b");quick->addWidget(holdBtn,0,0);quick->addWidget(restoreBtn,0,1);quick->addWidget(clearBtn,1,0);quick->addWidget(payBtn,1,1);lv->addLayout(quick);connect(holdBtn,&QPushButton::clicked,this,[this]{hold();});connect(restoreBtn,&QPushButton::clicked,this,[this]{restore();});connect(clearBtn,&QPushButton::clicked,this,[this]{basket.clear();refreshCart();});connect(payBtn,&QPushButton::clicked,this,[this]{pay();});
-      auto *right=new QFrame;right->setStyleSheet("QFrame{background:#f4f6f8;border-radius:12px;}");content->addWidget(right,7);auto *rv=new QVBoxLayout(right);rv->setContentsMargins(4,4,4,4);auto *categoryScroll=new QScrollArea;categoryScroll->setWidgetResizable(true);categoryScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);categoryScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);categoryScroll->setFixedHeight(62);
+      auto *left=new QFrame;left->setMinimumWidth(300);left->setMaximumWidth(450);left->setStyleSheet("QFrame{background:white;border-radius:8px;}");content->addWidget(left,4);auto *lv=new QVBoxLayout(left);auto *cartTop=new QHBoxLayout;auto *cartTitle=new QLabel("SEPET");cartTitle->setStyleSheet("font-weight:600;font-size:16px");cartTop->addWidget(cartTitle);cartTop->addStretch();countLabel=new QLabel;cartTop->addWidget(countLabel);lv->addLayout(cartTop);auto *cartScroll=new QScrollArea;cartScroll->setWidgetResizable(true);cartHolder=new QWidget;cartRows=new QVBoxLayout(cartHolder);cartRows->setContentsMargins(0,0,0,0);cartScroll->setWidget(cartHolder);lv->addWidget(cartScroll,1);auto *s1=new QHBoxLayout;s1->addWidget(new QLabel("Ara toplam"));s1->addStretch();subtotal=new QLabel;s1->addWidget(subtotal);lv->addLayout(s1);auto *g=new QFrame;g->setStyleSheet("background:#EBF3FC;border-radius:8px;");auto *gl=new QHBoxLayout(g);gl->addWidget(new QLabel("GENEL TOPLAM"));gl->addStretch();grand=new QLabel;grand->setStyleSheet("font-size:20px;font-weight:600;color:#242424;");gl->addWidget(grand);lv->addWidget(g);auto *quick=new QGridLayout;auto *holdBtn=action("Beklet","standard");auto *restoreBtn=action("Bekleyenler","standard");auto *clearBtn=action("Temizle","danger");auto *payBtn=action("ÖDEME AL","success");quick->addWidget(holdBtn,0,0);quick->addWidget(restoreBtn,0,1);quick->addWidget(clearBtn,1,0);quick->addWidget(payBtn,1,1);lv->addLayout(quick);connect(holdBtn,&QPushButton::clicked,this,[this]{hold();});connect(restoreBtn,&QPushButton::clicked,this,[this]{restore();});connect(clearBtn,&QPushButton::clicked,this,[this]{basket.clear();refreshCart();});connect(payBtn,&QPushButton::clicked,this,[this]{pay();});
+      auto *right=new QFrame;right->setStyleSheet("QFrame{background:#F3F3F3;border-radius:8px;}");content->addWidget(right,7);auto *rv=new QVBoxLayout(right);rv->setContentsMargins(4,4,4,4);auto *categoryScroll=new QScrollArea;categoryScroll->setWidgetResizable(true);categoryScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);categoryScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);categoryScroll->setFixedHeight(62);
       auto *categoryWidget=new QWidget;categoryBar=new QHBoxLayout(categoryWidget);categoryBar->setContentsMargins(3,3,3,3);categoryWidget->setMinimumWidth(690);categoryScroll->setWidget(categoryWidget);rv->addWidget(categoryScroll);search=new QLineEdit;search->setPlaceholderText("Ürün adı veya barkod / stok kodu ara...");search->setMinimumHeight(42);rv->addWidget(search);
       auto *scanRow=new QHBoxLayout;
-      auto *scanIcon=new QLabel("▥  BARKOD");scanIcon->setStyleSheet("color:#e6532e;font-weight:800;");scanRow->addWidget(scanIcon);
-      barcodeInput=new QLineEdit;barcodeInput->setObjectName("barcodeInput");barcodeInput->setPlaceholderText("Barkodu okutun / yazın ve Enter'a basın");barcodeInput->setMinimumHeight(44);barcodeInput->setMaxLength(64);barcodeInput->setStyleSheet("QLineEdit{background:#fff8f5;border:2px solid #f3a38b;border-radius:9px;padding:8px 12px;font-weight:700;}QLineEdit:focus{border:2px solid #f15a32;}");scanRow->addWidget(barcodeInput,1);
+      auto *scanIcon=new QLabel("▥  BARKOD");scanIcon->setStyleSheet("color:#0F6CBD;font-weight:600;");scanRow->addWidget(scanIcon);
+      barcodeInput=new QLineEdit;barcodeInput->setObjectName("barcodeInput");barcodeInput->setPlaceholderText("Barkodu okutun / yazın ve Enter'a basın");barcodeInput->setMinimumHeight(44);barcodeInput->setMaxLength(64);barcodeInput->setStyleSheet("QLineEdit{background:#FFFFFF;border:2px solid #0F6CBD;border-radius:4px;padding:8px 12px;font-weight:600;}QLineEdit:focus{border:2px solid #0F6CBD;}");scanRow->addWidget(barcodeInput,1);
       auto *scanGo=new QPushButton("Ürünü Ekle");scanGo->setStyleSheet(orangeButton());scanRow->addWidget(scanGo);
       auto *focusScan=new QPushButton("F8 Barkod");focusScan->setStyleSheet(paleButton());scanRow->addWidget(focusScan);
       auto *packSales=new QPushButton("Koli / Paket Sat");packSales->setStyleSheet(paleButton());scanRow->addWidget(packSales);connect(packSales,&QPushButton::clicked,this,[this]{choosePackForSale();});
       auto *barcodeSettings=new QPushButton("Barkod Yönetimi");barcodeSettings->setStyleSheet(paleButton());scanRow->addWidget(barcodeSettings);connect(barcodeSettings,&QPushButton::clicked,this,[this]{barcodeManager();});
-      rv->addLayout(scanRow);barcodeState=new QLabel("USB barkod okuyucuyu klavye/HID modunda kullanın (Enter sonlandırıcı).");barcodeState->setStyleSheet("color:#65768b;font-size:11px;");rv->addWidget(barcodeState);
+      rv->addLayout(scanRow);barcodeState=new QLabel("USB barkod okuyucuyu klavye/HID modunda kullanın (Enter sonlandırıcı).");barcodeState->setStyleSheet("color:#616161;font-size:11px;");rv->addWidget(barcodeState);
       connect(barcodeInput,&QLineEdit::returnPressed,this,[this]{scanBarcode();});connect(scanGo,&QPushButton::clicked,this,[this]{scanBarcode();});
       auto *screenShortcut=new QShortcut(QKeySequence(Qt::Key_F11),this);connect(screenShortcut,&QShortcut::activated,this,[this]{togglePosFullscreen();});
             auto *scanShortcut=new QShortcut(QKeySequence(Qt::Key_F8),this);connect(scanShortcut,&QShortcut::activated,this,[this]{barcodeInput->setFocus();barcodeInput->selectAll();});
@@ -1554,12 +1536,4 @@ public:
 };
 
 int main(int argc,char **argv){QApplication app(argc,argv);
-    app.setStyleSheet(UiDesign::globalQss() + QString::fromUtf8(R"QSS(
-       QDialog { background:#f6f8fb; color:#26364b; font-family:'Segoe UI'; font-size:13px; }
-       QDialog QLabel { color:#26364b; }
-       QDialog QLineEdit,QDialog QComboBox,QDialog QSpinBox,QDialog QDoubleSpinBox,QDialog QDateEdit { background:#ffffff; border:1px solid #d4dfeb; border-radius:8px; padding:8px; min-height:20px; }
-       QDialog QPushButton { background:#f15a32; color:white; border:0; border-radius:9px; padding:10px 14px; min-height:22px; font-weight:600; }
-       QDialog QPushButton:hover { background:#dd4825; }
-       QDialog QTableWidget { background:white; alternate-background-color:#f2f6fa; border:1px solid #dce5ed; gridline-color:#e9eff4; selection-background-color:#fbe4dd; selection-color:#25354b; }
-       QDialog QHeaderView::section { background:#eaf0f7; padding:10px; color:#283b54; border:0; font-weight:700; }
-    )QSS"));app.setApplicationName("KasaPro");app.setOrganizationName("KasaPro");if(!initDb()){QMessageBox::critical(nullptr,"Veritabanı","SQLite açılamadı: "+db.lastError().text());return 1;}if(!initSalesReturns()){QMessageBox::critical(nullptr,"İade şeması",db.lastError().text());return 1;}QString supervisorError;if(!SupervisorGate::initialize(db,&supervisorError)){QMessageBox::critical(nullptr,"Yetkilendirme",supervisorError);return 1;}PosWindow window;QSettings uiSettings("KasaPro","KasaPro");if(uiSettings.value("ui/posFullscreen",false).toBool())window.showFullScreen();else window.show();return app.exec();}
+    FluentDesign::apply(app);app.setApplicationName("KasaPro");app.setOrganizationName("KasaPro");if(!initDb()){QMessageBox::critical(nullptr,"Veritabanı","SQLite açılamadı: "+db.lastError().text());return 1;}if(!initSalesReturns()){QMessageBox::critical(nullptr,"İade şeması",db.lastError().text());return 1;}QString supervisorError;if(!SupervisorGate::initialize(db,&supervisorError)){QMessageBox::critical(nullptr,"Yetkilendirme",supervisorError);return 1;}PosWindow window;QSettings uiSettings("KasaPro","KasaPro");if(uiSettings.value("ui/posFullscreen",false).toBool())window.showFullScreen();else window.show();return app.exec();}
